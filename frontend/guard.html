@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Панель Охранника</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <header>
+        <h1>Панель Охранника</h1>
+    </header>
+
+    <!-- Поиск -->
+    <input type="text" id="search-input" placeholder="Поиск по номеру автомобиля...">
+
+    <!-- Добавление автомобиля -->
+    <form id="add-vehicle-form">
+        <input type="text" id="vehicle-number" placeholder="Номер автомобиля" required>
+        <input type="text" id="vehicle-brand" placeholder="Марка автомобиля" required>
+        <button type="submit">Добавить автомобиль</button>
+    </form>
+
+    <!-- Таблица автомобилей -->
+    <table>
+        <thead>
+            <tr>
+                <th>Номер автомобиля</th>
+                <th>Марка автомобиля</th>
+                <th>Время заезда</th>
+                <th>Время выезда</th>
+                <th>Общая сумма</th>
+                <th>Действия</th>
+            </tr>
+        </thead>
+        <tbody id="vehicle-table-body">
+            <!-- Список автомобилей будет загружен сюда -->
+        </tbody>
+    </table>
+
+    <div id="error-msg" class="error"></div>
+
+    <script src="js/guard.js"></script>
+</body>
+</html>
