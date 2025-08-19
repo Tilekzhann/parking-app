@@ -75,10 +75,10 @@ app.put('/vehicles/:id/exit', async (req, res) => {
     const millisecondsParked = exitTime - entryTime;
     const hoursParked = Math.ceil(millisecondsParked / (1000 * 60 * 60)); // Округляем до ближайшего большего
 
-    let totalAmount = 700;
+    let totalAmount = 1000;
     if (hoursParked > 24) {
       const extraHours = hoursParked - 24;
-      totalAmount += extraHours * 30; // 30 тенге за каждый дополнительный час
+      totalAmount += extraHours * 40; // 30 тенге за каждый дополнительный час
     }
 
     await vehicleRef.update({
