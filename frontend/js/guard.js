@@ -1,22 +1,19 @@
 document.addEventListener('DOMContentLoaded', function () {
     const vehicleTableBody = document.getElementById('vehicle-table-body');
-    const searchInput = document.getElementById('search-input'); // Исправленный ID
+    const searchInput = document.getElementById('search-input');
     const errorMsg = document.getElementById('error-msg');
     const addVehicleForm = document.getElementById('add-vehicle-form');
 
-    // Проверка наличия элементов
     if (!vehicleTableBody || !searchInput || !addVehicleForm) {
         console.error('Не удается найти необходимые элементы в DOM.');
         return;
     }
 
-   // Определяем базовый URL (локально → localhost, на сервере → Render)
-const baseUrl = window.location.origin;
+    // Единый базовый URL
+    const BASE_URL = window.location.origin;
 
-    // Загрузка автомобилей для охранника
     loadGuardVehicles();
 
-    // Поиск автомобилей по номеру
     searchInput.addEventListener('input', function () {
         const searchTerm = searchInput.value.toLowerCase();
         const rows = vehicleTableBody.querySelectorAll('tr');
@@ -26,28 +23,23 @@ const baseUrl = window.location.origin;
         });
     });
 
-    // Обработка формы добавления автомобиля
     addVehicleForm.addEventListener('submit', function (e) {
         e.preventDefault();
         addVehicle();
     });
 
-    // Функция загрузки списка автомобилей для охранника
     function loadGuardVehicles() {
-        fetch(`${baseURL}/guard/vehicles`)
+        fetch(`${BASE_URL}/guard/vehicles`)
             .then(response => {
                 if (!response.ok) throw new Error('Ошибка при загрузке автомобилей');
                 return response.json();
             })
             .then(data => {
-                           // Сортировка по времени заезда (entryTime), от нового к старому
-            data.sort((a, b) => new Date(b.entryTime) - new Date(a.entryTime));
-
-            vehicleTableBody.innerHTML = ''; 
+                data.sort((a, b) => new Date(b.entryTime) - new Date(a.entryTime));
+                vehicleTableBody.innerHTML = '';
 
                 data.forEach(vehicle => {
                     const row = document.createElement('tr');
-
                     row.innerHTML = `
                         <td>${vehicle.vehicleBrand}</td>
                         <td>${vehicle.vehicleNumber}</td>
@@ -61,7 +53,6 @@ const baseUrl = window.location.origin;
                     vehicleTableBody.appendChild(row);
                 });
 
-                // Добавляем обработчик для кнопок "Фиксировать выезд"
                 document.querySelectorAll('.exit-btn').forEach(button => {
                     button.addEventListener('click', function () {
                         const vehicleId = this.getAttribute('data-id');
@@ -75,7 +66,6 @@ const baseUrl = window.location.origin;
             });
     }
 
-    // Функция для добавления нового автомобиля
     function addVehicle() {
         const vehicleNumber = document.getElementById('vehicle-number').value.trim();
         const vehicleBrand = document.getElementById('vehicle-brand').value.trim();
@@ -85,7 +75,7 @@ const baseUrl = window.location.origin;
             return;
         }
 
-        fetch(`${baseURL}/vehicles/add-vehicle`, {
+        fetch(`${BASE_URL}/vehicles/add-vehicle`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ vehicleNumber, vehicleBrand })
@@ -98,7 +88,7 @@ const baseUrl = window.location.origin;
             alert(message);
             document.getElementById('vehicle-number').value = '';
             document.getElementById('vehicle-brand').value = '';
-            errorMsg.textContent = ''; // Очищаем сообщение об ошибке
+            errorMsg.textContent = '';
             loadGuardVehicles();
         })
         .catch(error => {
@@ -106,19 +96,16 @@ const baseUrl = window.location.origin;
             errorMsg.textContent = 'Ошибка при добавлении автомобиля.';
         });
     }
-// Обработка выбора марки автомобиля
-document.getElementById('vehicle-brand-select').addEventListener('change', function () {
-    const selectedBrand = this.value;
-    if (selectedBrand) {
-        document.getElementById('vehicle-brand').value = selectedBrand; // Заполняем поле выбранной маркой
-    }
-});
 
-    // Функция для фиксации выезда автомобиля
+    document.getElementById('vehicle-brand-select').addEventListener('change', function () {
+        const selectedBrand = this.value;
+        if (selectedBrand) {
+            document.getElementById('vehicle-brand').value = selectedBrand;
+        }
+    });
+
     function recordExit(vehicleId) {
-        fetch(`${baseURL}/vehicles/${vehicleId}/exit`, {
-            method: 'PUT'
-        })
+        fetch(`${BASE_URL}/vehicles/${vehicleId}/exit`, { method: 'PUT' })
         .then(response => {
             if (!response.ok) throw new Error('Ошибка при фиксации выезда.');
             return response.text();
