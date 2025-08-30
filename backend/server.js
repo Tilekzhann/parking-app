@@ -22,7 +22,8 @@ const db = firebaseAdmin.firestore();
 
 
 // Вариант 2: логин по username/password (admin / guard)
-app.post('/auth/user-login', (req, res) => {
+// Логин по username/password (admin / guard)
+app.post('/auth/login', (req, res) => {
   const { username, password } = req.body;
   const users = {
     admin: { password: '123', role: 'admin' },
@@ -35,6 +36,7 @@ app.post('/auth/user-login', (req, res) => {
     res.status(401).json({ error: 'Неверное имя пользователя или пароль' });
   }
 });
+
 
 
 // ======================= VEHICLES =======================
