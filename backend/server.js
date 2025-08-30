@@ -12,32 +12,36 @@ app.use(bodyParser.json());
 app.use(cors());
 
 // Firebase init через переменные окружения
-const firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG);
-firebaseAdmin.initializeApp({
-  credential: firebaseAdmin.credential.cert(firebaseConfig),
-});
+let serviceAccount;
+try {
+  serviceAccount = JSON.parse(process.env.FIREBASE_CONFIG);
+  firebaseAdmin.initializeApp({
+    credential: firebaseAdmin.credential.cert(serviceAccount),
+  });
+  console.log("✅ Firebase initialized");
+} catch (err) {
+  console.error("❌ Ошибка инициализации Firebase:", err.message);
+}
 const db = firebaseAdmin.firestore();
 
-
-
-
-// Вариант 2: логин по username/password (admin / guard)
-// Логин по username/password (admin / guard)
+// ======================= AUTH =======================
 app.post('/auth/login', (req, res) => {
-  const { username, password } = req.body;
-  const users = {
-    admin: { password: '123', role: 'admin' },
-    guard: { password: '123', role: 'guard' }
-  };
+  try {
+    const { username, password } = req.body;
+    const users = {
+      admin: { password: '123', role: 'admin' },
+      guard: { password: '123', role: 'guard' }
+    };
 
-  if (users[username] && users[username].password === password) {
-    res.status(200).json({ role: users[username].role });
-  } else {
-    res.status(401).json({ error: 'Неверное имя пользователя или пароль' });
+    if (users[username] && users[username].password === password) {
+      return res.status(200).json({ role: users[username].role });
+    }
+    return res.status(401).json({ error: true, message: 'Неверное имя пользователя или пароль' });
+  } catch (error) {
+    console.error("Ошибка логина:", error);
+    res.status(500).json({ error: true, message: error.message });
   }
 });
-
-
 
 // ======================= VEHICLES =======================
 
@@ -55,9 +59,10 @@ app.post('/vehicles/add-vehicle', async (req, res) => {
       totalAmount: 0
     });
 
-    res.status(200).send('Автомобиль успешно добавлен!');
+    res.status(200).json({ success: true, message: 'Автомобиль успешно добавлен!' });
   } catch (error) {
-    res.status(500).send('Ошибка добавления автомобиля: ' + error.message);
+    console.error("Ошибка добавления автомобиля:", error);
+    res.status(500).json({ error: true, message: error.message });
   }
 });
 
@@ -69,7 +74,8 @@ app.get('/vehicles', async (req, res) => {
     snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
     res.status(200).json(list);
   } catch (error) {
-    res.status(500).send('Ошибка получения автомобилей: ' + error.message);
+    console.error("Ошибка получения автомобилей:", error);
+    res.status(500).json({ error: true, message: error.message });
   }
 });
 
@@ -80,7 +86,9 @@ app.put('/vehicles/:id/exit', async (req, res) => {
     const ref = db.collection('vehicles').doc(id);
     const doc = await ref.get();
 
-    if (!doc.exists) return res.status(404).send('Автомобиль не найден');
+    if (!doc.exists) {
+      return res.status(404).json({ error: true, message: 'Автомобиль не найден' });
+    }
 
     const entryTime = new Date(doc.data().entryTime);
     const exitTime = new Date();
@@ -97,9 +105,10 @@ app.put('/vehicles/:id/exit', async (req, res) => {
       totalAmount
     });
 
-    res.status(200).send(`Выезд зафиксирован. Общая сумма: ${totalAmount} KZT`);
+    res.status(200).json({ success: true, message: `Выезд зафиксирован. Общая сумма: ${totalAmount} KZT` });
   } catch (error) {
-    res.status(500).send('Ошибка при обновлении: ' + error.message);
+    console.error("Ошибка при обновлении автомобиля:", error);
+    res.status(500).json({ error: true, message: error.message });
   }
 });
 
@@ -107,13 +116,14 @@ app.put('/vehicles/:id/exit', async (req, res) => {
 app.delete('/vehicles/:id', async (req, res) => {
   try {
     await db.collection('vehicles').doc(req.params.id).delete();
-    res.status(200).send('Автомобиль удалён успешно!');
+    res.status(200).json({ success: true, message: 'Автомобиль удалён успешно!' });
   } catch (error) {
-    res.status(500).send('Ошибка удаления: ' + error.message);
+    console.error("Ошибка удаления автомобиля:", error);
+    res.status(500).json({ error: true, message: error.message });
   }
 });
 
-// Отчёт для администратора
+// ======================= ADMIN =======================
 app.get('/admin/report', async (req, res) => {
   try {
     const snapshot = await db.collection('vehicles').get();
@@ -126,10 +136,10 @@ app.get('/admin/report', async (req, res) => {
 
     res.status(200).json({ totalAmount, vehicleCount: count });
   } catch (error) {
-    res.status(500).send('Ошибка отчёта: ' + error.message);
+    console.error("Ошибка получения отчёта:", error);
+    res.status(500).json({ error: true, message: error.message });
   }
 });
-
 
 // ======================= FRONTEND =======================
 app.use(express.static(path.join(__dirname, '../frontend')));
@@ -137,8 +147,7 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend', 'index.html'));
 });
 
-
 // ======================= START =======================
 app.listen(port, () => {
-  console.log(`Сервер запущен: http://localhost:${port}`);
+  console.log(`🚀 Сервер запущен: http://localhost:${port}`);
 });
