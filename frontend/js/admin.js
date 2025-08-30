@@ -2,9 +2,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const vehicleTableBody = document.getElementById('vehicle-table-body');
     const searchInput = document.getElementById('search');
 
+    // Определяем базовый URL (локально → localhost, на сервере → Render URL)
+    const baseUrl = window.location.origin;
+
     // Функция для загрузки списка автомобилей
     function loadVehicles() {
-        fetch('http://localhost:3000/vehicles')
+        fetch(`${baseUrl}/vehicles`)
             .then(response => response.json())
             .then(vehicles => {
                 vehicleTableBody.innerHTML = '';
@@ -32,42 +35,40 @@ document.addEventListener('DOMContentLoaded', function () {
         const rows = vehicleTableBody.querySelectorAll('tr');
         rows.forEach(row => {
             const vehicleNumber = row.cells[0].textContent.toLowerCase();
-            if (vehicleNumber.includes(searchTerm)) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
+            row.style.display = vehicleNumber.includes(searchTerm) ? '' : 'none';
         });
     });
 
     // Функция для удаления автомобиля
     window.deleteVehicle = function (id) {
-        fetch(`http://localhost:3000/vehicles/${id}`, { method: 'DELETE' })
+        fetch(`${baseUrl}/vehicles/${id}`, { method: 'DELETE' })
             .then(() => loadVehicles())
             .catch(error => {
                 console.error('Ошибка при удалении автомобиля:', error);
             });
     };
-function loadReport() {
-  fetch('http://localhost:3000/admin/report')
-    .then(response => response.json())
-    .then(data => {
-      const reportSection = document.getElementById('report');
-      reportSection.innerHTML = `
-        <h3>Отчёт</h3>
-        <p>Количество автомобилей: ${data.vehicleCount}</p>
-        <p>Общая сумма: ${data.totalAmount} KZT</p>
-      `;
-    })
-    .catch(error => {
-      console.error('Ошибка при получении отчёта:', error);
-      document.getElementById('error-msg').textContent = 'Ошибка при загрузке отчёта.';
+
+    // Функция для загрузки отчёта
+    function loadReport() {
+        fetch(`${baseUrl}/admin/report`)
+            .then(response => response.json())
+            .then(data => {
+                const reportSection = document.getElementById('report');
+                reportSection.innerHTML = `
+                    <h3>Отчёт</h3>
+                    <p>Количество автомобилей: ${data.vehicleCount}</p>
+                    <p>Общая сумма: ${data.totalAmount} KZT</p>
+                `;
+            })
+            .catch(error => {
+                console.error('Ошибка при получении отчёта:', error);
+                document.getElementById('error-msg').textContent = 'Ошибка при загрузке отчёта.';
+            });
+    }
+
+    // При загрузке страницы
+    window.addEventListener('load', function () {
+        loadVehicles();
+        loadReport();
     });
-}
-
-window.addEventListener('load', function () {
-  loadVehicles(); // Загрузка списка автомобилей
-  loadReport();   // Загрузка отчета
-});
-
 });
