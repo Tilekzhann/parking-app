@@ -17,6 +17,17 @@
     <!-- Добавление автомобиля -->
     <form id="add-vehicle-form">
         <input type="text" id="vehicle-number" placeholder="Номер автомобиля" required>
+        
+        <!-- Выпадающий список для выбора марки автомобиля -->
+        <select id="vehicle-brand-select">
+            <option value="">Выберите марку автомобиля</option>
+            <option value="DAF">DAF</option>
+            <option value="MAN">MAN</option>
+            <option value="KAMAZ">KAMAZ</option>
+            <option value="MERS">MERS</option>
+            <option value="SHACMAN">SHACMAN</option>
+        </select>
+
         <input type="text" id="vehicle-brand" placeholder="Марка автомобиля" required>
         <button type="submit">Добавить автомобиль</button>
     </form>
@@ -25,9 +36,9 @@
     <table>
         <thead>
             <tr>
-                <th>Номер автомобиля</th>
                 <th>Марка автомобиля</th>
-                <th>Время заезда</th>
+                <th>Номер автомобиля</th>
+		<th>Время заезда</th>
                 <th>Время выезда</th>
                 <th>Общая сумма</th>
                 <th>Действия</th>
