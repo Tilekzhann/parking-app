@@ -14,18 +14,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
         rows.forEach(row => {
             const vehicleNumber = row.querySelector('td').textContent.toLowerCase();
-            if (vehicleNumber.includes(searchTerm)) {
-                row.style.display = ''; // Показать строки, которые соответствуют поисковому запросу
-            } else {
-                row.style.display = 'none'; // Скрыть строки, которые не соответствуют
-            }
+            row.style.display = vehicleNumber.includes(searchTerm) ? '' : 'none';
         });
     });
 });
 
+// Определяем базовый URL (локально → localhost, на сервере → Render)
+const baseUrl = window.location.origin;
+
 // Функция для загрузки списка автомобилей
 function loadVehicles() {
-    fetch('http://localhost:3000/vehicles')
+    fetch(`${baseUrl}/vehicles`)
         .then(response => response.json())
         .then(data => {
             const tableBody = document.getElementById('vehicle-table-body');
@@ -64,7 +63,7 @@ function addVehicle() {
     const vehicleNumber = document.getElementById('vehicle-number').value;
     const vehicleBrand = document.getElementById('vehicle-brand').value;
 
-    fetch('http://localhost:3000/vehicles/add-vehicle', {
+    fetch(`${baseUrl}/vehicles/add-vehicle`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ vehicleNumber, vehicleBrand })
@@ -81,7 +80,7 @@ function addVehicle() {
 
 // Функция для фиксации выезда автомобиля
 function recordExit(vehicleId) {
-    fetch(`http://localhost:3000/vehicles/${vehicleId}/exit`, {
+    fetch(`${baseUrl}/vehicles/${vehicleId}/exit`, {
         method: 'PUT'
     })
         .then(response => response.text())
