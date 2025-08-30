@@ -19,27 +19,7 @@ firebaseAdmin.initializeApp({
 const db = firebaseAdmin.firestore();
 
 
-// ======================= AUTH =======================
-// Вариант 1: логин через email/password (из index.html)
-app.post('/auth/login', async (req, res) => {
-  const { email, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email и пароль обязательны' });
-  }
-
-  try {
-    await db.collection('logins').add({
-      email,
-      password,
-      timestamp: new Date().toISOString()
-    });
-    res.status(200).json({ message: 'Данные успешно отправлены' });
-  } catch (error) {
-    console.error("Ошибка Firebase:", error);
-    res.status(500).json({ error: 'Ошибка сервера: ' + error.message });
-  }
-});
 
 // Вариант 2: логин по username/password (admin / guard)
 app.post('/auth/user-login', (req, res) => {
