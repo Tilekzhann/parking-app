@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Панель Администратора</title>
     <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <header>
@@ -13,17 +14,31 @@
 
     <input type="text" id="search" placeholder="Поиск по номеру автомобиля...">
 
-    <section>
+    <!-- Форма для добавления автомобиля задним числом -->
+    <div class="container">
+        <p align="center">Добавить автомобиль (задним числом)</p>
+        <form id="add-vehicle-past-form">
+            <input type="text" id="vehicle-number-past" placeholder="Номер автомобиля" required>
+            <input type="text" id="vehicle-brand-past" placeholder="Марка автомобиля" required>
+            <label for="entry-date-past">Дата заезда:</label>
+            <input type="date" id="entry-date-past" required>
+            <label for="entry-time-past">Время заезда:</label>
+            <input type="time" id="entry-time-past" required>
+            <button type="submit">Добавить автомобиль</button>
+        </form>
+    </div>
+
+    <section class="container">
         <table>
             <thead>
                 <tr>
+		    <th>Марка автомобиля</th>
                     <th>Номер автомобиля</th>
-                    <th>Марка автомобиля</th>
                     <th>Время заезда</th>
                     <th>Время выезда</th>
                     <th>Общая сумма</th>
                     <th>Действия</th>
-                </tr>	
+                </tr>    
             </thead>
             <tbody id="vehicle-table-body">
                 <!-- Данные автомобилей будут загружены сюда -->
@@ -31,10 +46,17 @@
         </table>
     </section>
 
-    <section id="report">
-        <h2>Отчёт</h2>
-        <!-- Здесь будет отображён отчёт -->
-    </section>
+    <section id="report" class="hidden">
+    <!-- Здесь будет отображаться отчет -->
+</section>
+
+    <div id="incas-amount">Сумма к инкассации: 0 KZT</div>
+
+    <!-- Кнопки для показа отчета и инкассации -->
+    <div class="button-container">
+        <button id="show-report">Показать Отчет</button>
+        <button id="incas-button">Инкассация</button>
+    </div>
 
     <div id="error-msg" class="error"></div>
 
