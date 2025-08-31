@@ -126,9 +126,9 @@ app.put('/vehicles/:id/exit', async (req, res) => {
     const exitTime = new Date();
     const hoursParked = Math.ceil((exitTime - entryTime) / (1000 * 60 * 60));
 
-    let totalAmount = 700;
+    let totalAmount = 1000;
     if (hoursParked > 24) {
-      totalAmount += (hoursParked - 24) * 29;
+      totalAmount += (hoursParked - 24) * 41;
     }
 
     await ref.update({
