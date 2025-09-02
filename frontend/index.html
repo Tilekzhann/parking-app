@@ -4,7 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Parking App</title>
+
+    <!-- Подключение стилей -->
     <link rel="stylesheet" href="css/styles.css">
+
+    <!-- ✅ Манифест -->
+    <link rel="manifest" href="./manifest.json">
+
+    <!-- ✅ Цвет статус-бара для мобильных -->
+    <meta name="theme-color" content="#FFD700">
+
+    <!-- ✅ Иконка (для вкладки и PWA) -->
+    <link rel="icon" href="./assets/icons/icon-192x192.png" type="image/png">
 </head>
 <body>
     <div class="login-container">
@@ -20,5 +31,14 @@
     </div>
 
     <script src="js/login.js"></script>
+
+    <!-- ✅ Регистрация сервис-воркера -->
+    <script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./service-worker.js')
+            .then(reg => console.log('✅ Service Worker зарегистрирован:', reg.scope))
+            .catch(err => console.error('❌ Ошибка регистрации Service Worker:', err));
+    }
+    </script>
 </body>
 </html>
