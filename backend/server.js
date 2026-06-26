@@ -7,7 +7,6 @@ const path = require('path');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Middleware
 app.use(bodyParser.json());
 app.use(cors());
 
@@ -20,8 +19,7 @@ try {
   console.log("PROJECT:", sa.project_id);
   console.log("CLIENT:", sa.client_email);
   console.log("PRIVATE KEY START:", sa.private_key?.slice(0, 30));
-  console.log("KEY ID:", sa.private_key_id); 
-
+  console.log("KEY ID:", sa.private_key_id);
 
   serviceAccount = sa;
 
@@ -39,9 +37,27 @@ try {
 const db = firebaseAdmin.firestore();
 
 // ======================= FIRESTORE TEST =======================
-db.collection('vehicles').get()
-  .then(snap => console.log("✅ Firestore работает, документов:", snap.size))
-  .catch(err => console.error("❌ Firestore ошибка:", err.code, err.details));
+async function testFirestore() {
+  try {
+    // Тест 1: получить токен
+    const token = await firebaseAdmin.app().options.credential.getAccessToken();
+    console.log("✅ Access token получен:", token.access_token?.slice(0, 20) + "...");
+
+    // Тест 2: запрос к Firestore
+    const snapshot = await db.collection('vehicles').get();
+    console.log("✅ Firestore работает, документов:", snapshot.size);
+
+  } catch (err) {
+    console.error("❌ Firestore ошибка код:", err.code);
+    console.error("❌ Firestore ошибка детали:", err.details);
+    console.error("❌ Firestore ошибка message:", err.message);
+    if (err.metadata) {
+      console.error("❌ Metadata:", JSON.stringify([...err.metadata.internalRepr]));
+    }
+  }
+}
+
+testFirestore();
 
 // ======================= AUTH =======================
 app.post('/auth/login', (req, res) => {
@@ -56,216 +72,117 @@ app.post('/auth/login', (req, res) => {
     return res.status(200).json({ role: users[username].role });
   }
 
-  return res.status(401).json({
-    error: true,
-    message: 'Неверное имя пользователя или пароль'
-  });
+  return res.status(401).json({ error: true, message: 'Неверное имя пользователя или пароль' });
 });
 
 // ======================= VEHICLES =======================
 
-// Добавление автомобиля задним числом
 app.post('/vehicles/add-past', async (req, res) => {
   try {
     const { vehicleNumber, vehicleBrand, entryTime } = req.body;
-
     const vehicleRef = db.collection('vehicles').doc();
-
-    const entryTimestamp = entryTime
-      ? new Date(entryTime).toISOString()
-      : new Date().toISOString();
-
-    await vehicleRef.set({
-      vehicleNumber,
-      vehicleBrand,
-      entryTime: entryTimestamp,
-      exitTime: null,
-      totalAmount: 0,
-      incasStatus: false
-    });
-
+    const entryTimestamp = entryTime ? new Date(entryTime).toISOString() : new Date().toISOString();
+    await vehicleRef.set({ vehicleNumber, vehicleBrand, entryTime: entryTimestamp, exitTime: null, totalAmount: 0, incasStatus: false });
     res.json({ success: true, message: 'Автомобиль добавлен задним числом!' });
-
   } catch (error) {
     console.error("Ошибка add-past:", error);
     res.status(500).json({ error: true, message: error.message });
   }
 });
 
-// Добавление автомобиля (обычное)
 app.post('/vehicles/add-vehicle', async (req, res) => {
   try {
     const { vehicleNumber, vehicleBrand } = req.body;
-
     const vehicleRef = db.collection('vehicles').doc();
-
-    await vehicleRef.set({
-      vehicleNumber,
-      vehicleBrand,
-      entryTime: new Date().toISOString(),
-      exitTime: null,
-      totalAmount: 0,
-      incasStatus: false
-    });
-
+    await vehicleRef.set({ vehicleNumber, vehicleBrand, entryTime: new Date().toISOString(), exitTime: null, totalAmount: 0, incasStatus: false });
     res.json({ success: true, message: 'Автомобиль добавлен!' });
-
   } catch (error) {
     console.error("Ошибка add-vehicle:", error);
     res.status(500).json({ error: true, message: error.message });
   }
 });
 
-// Список автомобилей (админ)
 app.get('/admin/vehicles', async (req, res) => {
   try {
     const snapshot = await db.collection('vehicles').get();
-
     const vehicles = [];
-    snapshot.forEach(doc => {
-      vehicles.push({ id: doc.id, ...doc.data() });
-    });
-
+    snapshot.forEach(doc => vehicles.push({ id: doc.id, ...doc.data() }));
     res.json(vehicles);
-
   } catch (error) {
     console.error("Ошибка admin/vehicles:", error);
     res.status(500).json({ error: true, message: error.message });
   }
 });
 
-// Список автомобилей (охранник)
 app.get('/guard/vehicles', async (req, res) => {
   try {
-    const snapshot = await db
-      .collection('vehicles')
-      .where('incasStatus', '==', false)
-      .get();
-
+    const snapshot = await db.collection('vehicles').where('incasStatus', '==', false).get();
     const vehicles = [];
-    snapshot.forEach(doc => {
-      vehicles.push({ id: doc.id, ...doc.data() });
-    });
-
+    snapshot.forEach(doc => vehicles.push({ id: doc.id, ...doc.data() }));
     res.json(vehicles);
-
   } catch (error) {
     console.error("Ошибка guard/vehicles:", error);
     res.status(500).json({ error: true, message: error.message });
   }
 });
 
-// Фиксация выезда
 app.put('/vehicles/:id/exit', async (req, res) => {
   try {
     const ref = db.collection('vehicles').doc(req.params.id);
     const doc = await ref.get();
-
-    if (!doc.exists) {
-      return res.status(404).json({ error: true, message: 'Автомобиль не найден' });
-    }
-
+    if (!doc.exists) return res.status(404).json({ error: true, message: 'Автомобиль не найден' });
     const entryTime = new Date(doc.data().entryTime);
     const exitTime = new Date();
-
-    const hoursParked = Math.ceil(
-      (exitTime - entryTime) / (1000 * 60 * 60)
-    );
-
+    const hoursParked = Math.ceil((exitTime - entryTime) / (1000 * 60 * 60));
     let totalAmount = 1000;
-    if (hoursParked > 24) {
-      totalAmount += (hoursParked - 24) * 41;
-    }
-
-    await ref.update({
-      exitTime: exitTime.toISOString(),
-      totalAmount
-    });
-
-    res.json({
-      success: true,
-      message: `Выезд зафиксирован. Сумма: ${totalAmount} KZT`
-    });
-
+    if (hoursParked > 24) totalAmount += (hoursParked - 24) * 41;
+    await ref.update({ exitTime: exitTime.toISOString(), totalAmount });
+    res.json({ success: true, message: `Выезд зафиксирован. Сумма: ${totalAmount} KZT` });
   } catch (error) {
     console.error("Ошибка exit:", error);
     res.status(500).json({ error: true, message: error.message });
   }
 });
 
-// Удаление авто
 app.delete('/vehicles/:id', async (req, res) => {
   try {
     await db.collection('vehicles').doc(req.params.id).delete();
     res.json({ success: true, message: 'Автомобиль удалён!' });
-
   } catch (error) {
     console.error("Ошибка delete:", error);
     res.status(500).json({ error: true, message: error.message });
   }
 });
 
-// Отчёт
 app.get('/admin/report', async (req, res) => {
   try {
     const snapshot = await db.collection('vehicles').get();
-
-    let totalAmount = 0;
-    let vehicleCount = 0;
-    let currentVehicles = 0;
-
+    let totalAmount = 0, vehicleCount = 0, currentVehicles = 0;
     snapshot.forEach(doc => {
       const v = doc.data();
-
       totalAmount += v.totalAmount || 0;
       vehicleCount++;
-
       if (!v.exitTime) currentVehicles++;
     });
-
     res.json({ totalAmount, vehicleCount, currentVehicles });
-
   } catch (error) {
     console.error("Ошибка report:", error);
     res.status(500).json({ error: true, message: error.message });
   }
 });
 
-// Инкассация
 app.put('/admin/incas', async (req, res) => {
   try {
-    const snapshot = await db
-      .collection('vehicles')
-      .where('exitTime', '!=', null)
-      .where('incasStatus', '==', false)
-      .get();
-
-    if (snapshot.empty) {
-      return res.json({
-        message: 'Нет автомобилей для инкассации.',
-        totalIncasAmount: 0
-      });
-    }
-
+    const snapshot = await db.collection('vehicles').where('exitTime', '!=', null).where('incasStatus', '==', false).get();
+    if (snapshot.empty) return res.json({ message: 'Нет автомобилей для инкассации.', totalIncasAmount: 0 });
     let totalIncasAmount = 0;
     const batch = db.batch();
-
     snapshot.forEach(doc => {
-      const data = doc.data();
-      totalIncasAmount += data.totalAmount || 0;
-
-      batch.update(db.collection('vehicles').doc(doc.id), {
-        incasStatus: true
-      });
+      totalIncasAmount += doc.data().totalAmount || 0;
+      batch.update(db.collection('vehicles').doc(doc.id), { incasStatus: true });
     });
-
     await batch.commit();
-
-    res.json({
-      message: 'Инкассация завершена.',
-      totalIncasAmount
-    });
-
+    res.json({ message: 'Инкассация завершена.', totalIncasAmount });
   } catch (error) {
     console.error("Ошибка инкассации:", error);
     res.status(500).json({ error: true, message: error.message });
@@ -274,7 +191,6 @@ app.put('/admin/incas', async (req, res) => {
 
 // ======================= FRONTEND =======================
 app.use(express.static(path.join(__dirname, '../frontend')));
-
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend', 'index.html'));
 });
