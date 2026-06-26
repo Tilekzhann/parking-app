@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const firebaseAdmin = require('firebase-admin');
 const cors = require('cors');
 const path = require('path');
+const https = require('https');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -42,10 +43,8 @@ async function testFirestore() {
     const token = await firebaseAdmin.app().options.credential.getAccessToken();
     console.log("✅ Access token получен:", token.access_token?.slice(0, 20) + "...");
 
-    // Прямой REST запрос к Firestore
-    const https = require('https');
     const url = `https://firestore.googleapis.com/v1/projects/parking-app-9422d/databases/(default)/documents/vehicles`;
-    
+
     https.get(url, { headers: { 'Authorization': `Bearer ${token.access_token}` } }, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
@@ -56,9 +55,11 @@ async function testFirestore() {
     }).on('error', e => console.error("REST ошибка:", e.message));
 
   } catch (err) {
-    console.error("❌ Ошибка:", err.message);
+    console.error("❌ Ошибка токена:", err.message);
   }
 }
+
+testFirestore(); // ← вызов функции
 
 // ======================= AUTH =======================
 app.post('/auth/login', (req, res) => {
