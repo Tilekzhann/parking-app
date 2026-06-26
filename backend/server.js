@@ -212,3 +212,6 @@ app.get('*', (req, res) => {
 app.listen(port, () => {
   console.log(`🚀 Сервер запущен: http://localhost:${port}`);
 });
+
+console.log("SERVICE ACCOUNT:", require("./firebaseServiceAccount.json").client_email);
+console.log("PROJECT:", require("./firebaseServiceAccount.json").project_id);
