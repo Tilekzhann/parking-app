@@ -36,6 +36,11 @@ try {
 
 const db = firebaseAdmin.firestore();
 
+// ======================= FIRESTORE TEST =======================
+db.collection('vehicles').get()
+  .then(snap => console.log("✅ Firestore работает, документов:", snap.size))
+  .catch(err => console.error("❌ Firestore ошибка:", err.code, err.details));
+
 // ======================= AUTH =======================
 app.post('/auth/login', (req, res) => {
   const { username, password } = req.body;
