@@ -20,6 +20,8 @@ try {
   console.log("PROJECT:", sa.project_id);
   console.log("CLIENT:", sa.client_email);
   console.log("PRIVATE KEY START:", sa.private_key?.slice(0, 30));
+  console.log("KEY ID:", sa.private_key_id); 
+
 
   serviceAccount = sa;
 
