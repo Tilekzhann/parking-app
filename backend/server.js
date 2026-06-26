@@ -12,22 +12,29 @@ app.use(bodyParser.json());
 app.use(cors());
 
 // ======================= FIREBASE INIT =======================
-let db;
+let serviceAccount;
 
 try {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_CONFIG);
+  const sa = JSON.parse(process.env.FIREBASE_CONFIG);
+
+  console.log("PROJECT:", sa.project_id);
+  console.log("CLIENT:", sa.client_email);
+  console.log("PRIVATE KEY START:", sa.private_key?.slice(0, 30));
+
+  serviceAccount = sa;
 
   firebaseAdmin.initializeApp({
     credential: firebaseAdmin.credential.cert(serviceAccount),
   });
 
-  db = firebaseAdmin.firestore();
-
   console.log("✅ Firebase инициализирован");
-} catch (err) {
-  console.error("❌ Ошибка инициализации Firebase:", err.message);
-  process.exit(1); // чтобы сервер не работал в поломанном состоянии
+
+} catch (e) {
+  console.error("❌ JSON ERROR:", e.message);
+  process.exit(1);
 }
+
+const db = firebaseAdmin.firestore();
 
 // ======================= AUTH =======================
 app.post('/auth/login', (req, res) => {
