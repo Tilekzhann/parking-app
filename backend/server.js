@@ -37,13 +37,26 @@ try {
 
 const db = firebaseAdmin.firestore();
 
-// ======================= FIRESTORE TEST =======================
+// ======================= NETWORK + FIRESTORE TEST =======================
 async function testFirestore() {
+  // Тест 1: доступность Google
+  https.get('https://www.google.com', (res) => {
+    console.log("🌐 Google статус:", res.statusCode);
+  }).on('error', e => console.error("🌐 Google ошибка:", e.message));
+
+  // Тест 2: доступность Firestore домена
+  https.get('https://firestore.googleapis.com', (res) => {
+    console.log("🌐 Firestore домен статус:", res.statusCode);
+  }).on('error', e => console.error("🌐 Firestore домен ошибка:", e.message));
+
   try {
     const token = await firebaseAdmin.app().options.credential.getAccessToken();
     console.log("✅ Access token получен:", token.access_token?.slice(0, 20) + "...");
 
-    const url = `https://firestore.googleapis.com/v1/projects/parking-app-9422d/databases/(default)/documents/vehicles`;
+    // Тест 3: REST запрос с токеном — используем project_id из самого ключа
+    const projectId = serviceAccount.project_id;
+    const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/vehicles`;
+    console.log("🔗 REST URL:", url);
 
     https.get(url, { headers: { 'Authorization': `Bearer ${token.access_token}` } }, (res) => {
       let data = '';
@@ -59,7 +72,7 @@ async function testFirestore() {
   }
 }
 
-testFirestore(); // ← вызов функции
+testFirestore();
 
 // ======================= AUTH =======================
 app.post('/auth/login', (req, res) => {
